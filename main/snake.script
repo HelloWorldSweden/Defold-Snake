@@ -1,0 +1,113 @@
+local TILE_NONE = 0
+local TILE_EMPTY = 1
+local TILE_BODY = 2
+local TILE_FOOD = 3
+local TILE_WALL = 4
+local function put_food(self)
+	while true do
+		self.food = {x = math.random(2, 45), y = math.random(2, 45)}
+		local oldtile = tilemap.get_tile("#grid", "layer1", self.food.x, self.food.y)
+		if oldtile == TILE_EMPTY or oldtile == TILE_NONE then
+			tilemap.set_tile("#grid", "layer1", self.food.x, self.food.y, TILE_FOOD)
+			break
+		end
+		pprint("Oops, there's something there.")
+	end
+end
+local function reset_game_state(self)	
+	self.segments = {
+		{x = 7, y = 24},
+		{x = 8, y = 24},
+		{x = 9, y = 24},
+		{x = 10, y = 24}
+	}
+	self.dir = {x = 1, y = 0}
+	self.dirqueue = {}
+	self.speed = 7.0
+	self.alive = true
+	self.t = 0
+	msg.post("/gui#score", "reset_score")
+	put_food(self)
+end
+local function paint_snake(segments)
+	for i, s in ipairs(segments) do
+		tilemap.set_tile("#grid", "layer1", s.x, s.y, TILE_BODY)
+	end
+end
+local function erase_snake(segments)
+	for i, s in ipairs(segments) do
+		tilemap.set_tile("#grid", "layer1", s.x, s.y, TILE_EMPTY)
+	end
+end
+local function erase_food(food)
+	tilemap.set_tile("#grid", "layer1", food.x, food.y, TILE_EMPTY)
+end
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	msg.post("/gui#gameover", "hide")
+	math.randomseed(socket.gettime())
+	math.random(); math.random(); math.random()
+
+	reset_game_state(self)
+end
+
+function update(self, dt)
+	self.t = self.t + dt
+	if (self.t >= 1.0 / self.speed) and (self.alive) then
+		-- Take a direction from the queue
+		local newdir = table.remove(self.dirqueue, 1)
+
+		if newdir then
+			local opposite = newdir.x == -self.dir.x or newdir.y == -self.dir.y
+			if not opposite then
+				self.dir = newdir
+			end
+		end
+
+
+		local head = self.segments[#self.segments]
+		local newhead = {x = head.x + self.dir.x, y = head.y + self.dir.y}
+		-- Collision detection
+		local oldtile = tilemap.get_tile("#grid", "layer1", newhead.x, newhead.y)
+		if oldtile == TILE_BODY or oldtile == TILE_WALL then
+			-- Die
+			self.alive = false
+			msg.post("/gui#gameover", "show")
+		else
+			if oldtile == TILE_FOOD then
+				msg.post("/gui#score", "add_score", {score=0})	-- ändra poäng här
+
+				-- ändra hastiget, sätt + 1
+				self.speed = self.speed
+				put_food(self)
+			else
+				-- Remove the old tail
+				local tail = table.remove(self.segments, 1)
+				tilemap.set_tile("#grid", "layer1", tail.x, tail.y, TILE_EMPTY)
+			end
+			-- Update the snake
+			table.insert(self.segments, newhead)
+			paint_snake(self.segments)
+		end	
+		-- Finish up
+		self.t = 0
+	end
+end
+function on_message(self, message_id, message, sender)
+	if message_id == hash("restart") then
+		erase_snake(self.segments)
+		erase_food(self.food)
+		reset_game_state(self)
+	end
+end
+function on_input(self, action_id, action)
+	if action_id == hash("up") and action.pressed then
+		table.insert(self.dirqueue, {x = 0, y = 1})
+	elseif action_id == hash("down") and action.pressed then
+		table.insert(self.dirqueue, {x = 0, y = -1})
+	elseif action_id == hash("left") and action.pressed then
+		table.insert(self.dirqueue, {x = -1, y = 0})
+	-- elseif action_id == hash("right") and action.pressed then
+	-- 	table.insert(self.dirqueue, {x = 1, y = 0})
+	end
+end

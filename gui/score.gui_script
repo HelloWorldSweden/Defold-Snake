@@ -1,0 +1,39 @@
+local function update_scoretext(score)
+	local scoretext_node = gui.get_node("scoretext") 
+	gui.set_text(scoretext_node, "SCORE: " .. score) 
+end
+
+function init(self)
+	self.score = 0
+	update_scoretext(self.score)
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	-- Add update code here
+	-- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("add_score") then 
+		self.score = self.score + message.score 
+		update_scoretext(self.score)
+	elseif message_id == hash("reset_score") then 
+		self.score = 0
+		update_scoretext(self.score)
+	end 
+end
+
+function on_input(self, action_id, action)
+	-- Add input-handling code here
+	-- Remove this function if not needed
+end
+
+function on_reload(self)
+	-- Add input-handling code here
+	-- Remove this function if not needed
+end

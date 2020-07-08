@@ -1,0 +1,19 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+render = /codepad/rendering/custom.renderc
+
+[project]
+title = Snake_HW
+dependencies = https://github.com/helloworldsweden/codepad/archive/master.zip
+bundle_resources = /codepad/bundle_resources/
+
+[display]
+width = 768
+height = 768
+
+[script]
+shared_state = 1
+
+[html5]
+htmlfile = /codepad/template.html
+
